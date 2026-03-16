@@ -7,6 +7,8 @@ An AI-powered study assistant that helps you learn any topic through quizzes, su
 - 📄 Summarize mode — paste your notes and get a clean summary
 - 💡 Explain mode — get a beginner-friendly explanation of any concept
 - 📂 PDF mode — upload any PDF and ask questions about it (RAG pipeline)
+- 🧠 Conversation memory — follows up on previous answers within a session
+
 
 ## How PDF mode works
 Extracts text from a PDF using PyMuPDF, passes it as context to Gemini, and answers questions based on the document content. This is a basic implementation of Retrieval Augmented Generation (RAG).
