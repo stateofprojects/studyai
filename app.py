@@ -7,13 +7,14 @@ from memory import save_session, load_session, list_sessions
 
 load_dotenv()
 
+is_local = os.getenv("IS_LOCAL", "false") == "true"
+
 st.title("🎓 StudyAI")
 st.caption("Your AI-powered study assistant")
 
 # Sidebar — API key
 api_key = st.sidebar.text_input("🔑 Gemini API Key", type="password", placeholder="Paste your key here")
 gemini_client = genai.Client(api_key=api_key) if api_key else None
-local_client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
 
 SYSTEM_PROMPT = """You are StudyAI, an intelligent study assistant. 
 Based on what the user sends you, respond appropriately:
@@ -31,7 +32,12 @@ if "pdf_text" not in st.session_state:
     st.session_state.pdf_text = ""
 
 # Sidebar — AI backend
-backend = st.sidebar.radio("AI Backend", ["☁️ Gemini", "💻 Local (LM Studio)"])
+if is_local:
+    local_client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
+    backend = st.sidebar.radio("AI Backend", ["☁️ Gemini", "💻 Local (LM Studio)"])
+else:
+    backend = "☁️ Gemini"
+    st.sidebar.info("☁️ Running on Gemini cloud AI")
 
 # Sidebar — PDF upload
 st.sidebar.markdown("---")
