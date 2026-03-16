@@ -9,35 +9,89 @@ load_dotenv()
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 local_client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
 
+SYSTEM_PROMPT = """You are StudyAI, an intelligent study assistant. 
+Based on what the user sends you, respond appropriately:
+- If they ask you to explain something, explain it clearly like a beginner
+- If they ask to be quizzed, generate 5 questions on the topic
+- If they paste notes or text and ask for a summary, summarize it simply
+- If they ask questions about a PDF they uploaded, answer based on the content
+- If they follow up on something, use the conversation history for context
+Always be helpful, clear and encouraging."""
+
 st.title("🎓 StudyAI")
 st.caption("Your AI-powered study assistant")
 
 if "history" not in st.session_state:
     st.session_state.history = []
 
+if "pdf_text" not in st.session_state:
+    st.session_state.pdf_text = ""
+
+# Sidebar — AI backend
 backend = st.sidebar.radio("AI Backend", ["☁️ Gemini", "💻 Local (LM Studio)"])
 
-mode = st.sidebar.selectbox("Choose a mode", [
-    "💡 Explain a concept",
-    "📝 Quiz me",
-    "📄 Summarize notes",
-    "📂 Ask about a PDF"
-])
+# Sidebar — PDF upload
+st.sidebar.markdown("---")
+st.sidebar.subheader("📂 PDF")
+uploaded_file = st.sidebar.file_uploader("Upload a PDF", type="pdf", label_visibility="collapsed")
+if uploaded_file:
+    import fitz
+    doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+    st.session_state.pdf_text = ""
+    for page in doc:
+        st.session_state.pdf_text += page.get_text()
+    st.sidebar.success("✅ PDF loaded!")
+if st.session_state.pdf_text:
+    if st.sidebar.button("❌ Remove PDF"):
+        st.session_state.pdf_text = ""
+        st.rerun()
+
+# Sidebar — Sessions
+st.sidebar.markdown("---")
+st.sidebar.subheader("💾 Sessions")
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("💾 Save"):
+        if st.session_state.history:
+            save_session(st.session_state.history)
+            st.sidebar.success("Saved!")
+        else:
+            st.sidebar.warning("Nothing to save.")
+with col2:
+    if st.button("🗑️ Clear"):
+        st.session_state.history = []
+        st.session_state.pdf_text = ""
+        st.rerun()
+
+sessions = list_sessions()
+if sessions:
+    selected = st.sidebar.selectbox("Load a session:", ["-- Select --"] + sessions)
+    if selected != "-- Select --":
+        if st.sidebar.button("📂 Load"):
+            st.session_state.history = load_session(f"sessions/{selected}")
+            st.rerun()
 
 def ask(prompt):
-    st.session_state.history.append({"role": "user", "parts": [{"text": prompt}]})
+    if st.session_state.pdf_text:
+        full_prompt = f"{prompt}\n\nPDF context:\n{st.session_state.pdf_text}"
+    else:
+        full_prompt = prompt
+
+    st.session_state.history.append({"role": "user", "parts": [{"text": full_prompt}]})
 
     if "Gemini" in backend:
         response = gemini_client.models.generate_content(
             model="gemini-3-flash-preview",
-            contents=st.session_state.history
+            contents=[{"role": "user", "parts": [{"text": SYSTEM_PROMPT}]}] + st.session_state.history
         )
         reply = response.text
     else:
-        messages = [
-            {"role": "user" if m["role"] == "user" else "assistant", "content": m["parts"][0]["text"]}
-            for m in st.session_state.history
-        ]
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for m in st.session_state.history:
+            messages.append({
+                "role": "user" if m["role"] == "user" else "assistant",
+                "content": m["parts"][0]["text"]
+            })
         response = local_client.chat.completions.create(
             model="local-model",
             messages=messages
@@ -47,60 +101,17 @@ def ask(prompt):
     st.session_state.history.append({"role": "model", "parts": [{"text": reply}]})
     return reply
 
+# Chat history
 for msg in st.session_state.history:
-    role = "You" if msg["role"] == "user" else "AI"
-    with st.chat_message("user" if role == "You" else "assistant"):
+    with st.chat_message("user" if msg["role"] == "user" else "assistant"):
         st.markdown(msg["parts"][0]["text"])
 
-if "Explain" in mode:
-    topic = st.text_input("Enter a concept:")
-    if st.button("Explain") and topic:
-        ask(f"Explain this like I'm a beginner: {topic}")
+# Chat input
+if prompt := st.chat_input("Ask anything — explain, quiz, summarize..."):
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            reply = ask(prompt)
+        st.markdown(reply)
         st.rerun()
-
-elif "Quiz" in mode:
-    topic = st.text_input("Enter a topic:")
-    if st.button("Quiz me") and topic:
-        ask(f"Quiz me with 5 questions about: {topic}")
-        st.rerun()
-
-elif "Summarize" in mode:
-    notes = st.text_area("Paste your notes:")
-    if st.button("Summarize") and notes:
-        ask(f"Summarize this in simple terms:\n{notes}")
-        st.rerun()
-
-elif "PDF" in mode:
-    uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
-    question = st.text_input("What do you want to know?")
-    if st.button("Ask") and uploaded_file and question:
-        import fitz
-        doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-        pdf_text = ""
-        for page in doc:
-            pdf_text += page.get_text()
-        ask(f"Based on this document answer:\n{question}\n\nDocument:\n{pdf_text}")
-        st.rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("Sessions")
-
-sessions = list_sessions()
-if sessions:
-    selected = st.sidebar.selectbox("Load a session:", ["-- Select --"] + sessions)
-    if selected != "-- Select --":
-        if st.sidebar.button("Load"):
-            st.session_state.history = load_session(f"sessions/{selected}")
-            st.rerun()
-
-if st.sidebar.button("💾 Save session"):
-    if st.session_state.history:
-        filename = save_session(st.session_state.history)
-        st.sidebar.success(f"Saved!")
-    else:
-        st.sidebar.warning("Nothing to save yet.")
-
-
-if st.sidebar.button("Clear conversation"):
-    st.session_state.history = []
-    st.rerun()
