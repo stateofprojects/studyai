@@ -1,6 +1,6 @@
 # StudyAI
 
-An AI-powered study assistant that helps you learn any topic through quizzes, summaries, and explanations — built with Python and the Gemini API.
+An AI-powered study assistant that helps you learn any topic through quizzes, summaries, and explanations. Supports both cloud AI (Gemini) and fully offline local AI (LM Studio).
 
 ## Features
 - 📝 Quiz mode — generates 5 questions on any topic
@@ -9,23 +9,34 @@ An AI-powered study assistant that helps you learn any topic through quizzes, su
 - 📂 PDF mode — upload any PDF and ask questions about it (RAG pipeline)
 - 🧠 Conversation memory — follows up on previous answers within a session
 - 🌐 Web UI — runs locally in the browser via Streamlit
-
+- 💻 Local AI — runs fully offline via LM Studio, no API needed
 
 ## How PDF mode works
-Extracts text from a PDF using PyMuPDF, passes it as context to Gemini, and answers questions based on the document content. This is a basic implementation of Retrieval Augmented Generation (RAG).
+Extracts text from a PDF using PyMuPDF and passes it as context to the AI model. This is a basic implementation of Retrieval Augmented Generation (RAG).
 
 ## Setup
 1. Clone this repo
-2. Install dependencies: `pip install google-genai python-dotenv pymupdf`
-3. Create a `.env` file and add your Gemini API key: `GEMINI_API_KEY=your-key-here`
-4. Run: `python main.py`
+2. Install dependencies:
+```
+pip install google-genai python-dotenv pymupdf streamlit openai
+```
+3. Create a `.env` file and add your Gemini API key:
+```
+GEMINI_API_KEY=your-key-here
+```
+4. Optional: Download LM Studio from lmstudio.ai and load any local model
 
 ## Running the app
-- Terminal version: `python main.py`
 - Web UI: `streamlit run app.py`
+- Terminal version: `python main.py`
 
 ## Tech used
 - Python
 - Google Gemini API
+- LM Studio (local AI)
 - PyMuPDF
+- Streamlit
 - python-dotenv
+- OpenAI SDK
+
+
