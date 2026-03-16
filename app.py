@@ -3,6 +3,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from google import genai
 from openai import OpenAI
+from memory import save_session, load_session, list_sessions
 
 load_dotenv()
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -80,6 +81,25 @@ elif "PDF" in mode:
             pdf_text += page.get_text()
         ask(f"Based on this document answer:\n{question}\n\nDocument:\n{pdf_text}")
         st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Sessions")
+
+sessions = list_sessions()
+if sessions:
+    selected = st.sidebar.selectbox("Load a session:", ["-- Select --"] + sessions)
+    if selected != "-- Select --":
+        if st.sidebar.button("Load"):
+            st.session_state.history = load_session(f"sessions/{selected}")
+            st.rerun()
+
+if st.sidebar.button("💾 Save session"):
+    if st.session_state.history:
+        filename = save_session(st.session_state.history)
+        st.sidebar.success(f"Saved!")
+    else:
+        st.sidebar.warning("Nothing to save yet.")
+
 
 if st.sidebar.button("Clear conversation"):
     st.session_state.history = []
