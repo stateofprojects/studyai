@@ -8,6 +8,7 @@ An AI-powered study assistant that helps you learn any topic through quizzes, su
 - 💡 Explain mode — get a beginner-friendly explanation of any concept
 - 📂 PDF mode — upload any PDF and ask questions about it (RAG pipeline)
 - 🧠 Conversation memory — follows up on previous answers within a session
+- 🌐 Web UI — runs locally in the browser via Streamlit
 
 
 ## How PDF mode works
@@ -18,6 +19,10 @@ Extracts text from a PDF using PyMuPDF, passes it as context to Gemini, and answ
 2. Install dependencies: `pip install google-genai python-dotenv pymupdf`
 3. Create a `.env` file and add your Gemini API key: `GEMINI_API_KEY=your-key-here`
 4. Run: `python main.py`
+
+## Running the app
+- Terminal version: `python main.py`
+- Web UI: `streamlit run app.py`
 
 ## Tech used
 - Python
