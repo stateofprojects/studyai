@@ -1,63 +1,59 @@
 import os
 from dotenv import load_dotenv
 from google import genai
+import fitz
 
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-conversation_history = []
+SYSTEM_PROMPT = """You are StudyAI, an intelligent study assistant.
+Based on what the user sends you, respond appropriately:
+- If they ask you to explain something, explain it clearly like a beginner
+- If they ask to be quizzed, generate 5 questions on the topic
+- If they paste notes or text and ask for a summary, summarize it simply
+- If they ask questions about a PDF, answer based on the content provided
+- If they follow up on something, use the conversation history for context
+Always be helpful, clear and encouraging."""
+
+conversation_history = [{"role": "user", "parts": [{"text": SYSTEM_PROMPT}]}]
+pdf_context = ""
 
 def ask(prompt):
-    conversation_history.append({"role": "user", "parts": [{"text": prompt}]})
+    full_prompt = prompt
+    if pdf_context:
+        full_prompt = f"{prompt}\n\nPDF context:\n{pdf_context}"
     
+    conversation_history.append({"role": "user", "parts": [{"text": full_prompt}]})
     response = client.models.generate_content(
         model="gemini-3-flash-preview",
         contents=conversation_history
     )
-    
     reply = response.text
     conversation_history.append({"role": "model", "parts": [{"text": reply}]})
-    
     print("\nAI: " + reply)
 
-def read_pdf(file_path):
-    import fitz
+def load_pdf(file_path):
+    global pdf_context
     doc = fitz.open(file_path)
-    text = ""
+    pdf_context = ""
     for page in doc:
-        text += page.get_text()
-    return text
+        pdf_context += page.get_text()
+    print("✅ PDF loaded successfully!")
+
+print("=== StudyAI Terminal ===")
+print("Commands: 'load pdf' to load a PDF, 'exit' to quit")
+print("Otherwise just type naturally!\n")
 
 while True:
-    print("\n=== Study Assistant ===")
-    print("1. Quiz me on a topic")
-    print("2. Summarize my notes")
-    print("3. Explain a concept")
-    print("4. Ask questions about a PDF")
-    print("5. Follow up / continue conversation")
-    print("6. Exit")
-
-    mode = input("\nChoose a mode (1-6): ")
-
-    if mode == "1":
-        topic = input("Enter a topic: ")
-        ask(f"Quiz me with 5 questions about: {topic}")
-    elif mode == "2":
-        notes = input("Paste your notes: ")
-        ask(f"Summarize this in simple terms:\n{notes}")
-    elif mode == "3":
-        topic = input("Enter a concept: ")
-        ask(f"Explain this like I'm a beginner:\n{topic}")
-    elif mode == "4":
-        file_path = input("Enter the path to your PDF file: ")
-        pdf_text = read_pdf(file_path)
-        question = input("What do you want to know about this PDF? ")
-        ask(f"Based on this document, answer the following:\n{question}\n\nDocument content:\n{pdf_text}")
-    elif mode == "5":
-        follow_up = input("Your follow up: ")
-        ask(follow_up)
-    elif mode == "6":
+    user_input = input("You: ").strip()
+    
+    if not user_input:
+        continue
+    elif user_input.lower() == "exit":
         print("Goodbye!")
         break
+    elif user_input.lower() == "load pdf":
+        path = input("Enter PDF path: ")
+        load_pdf(path)
     else:
-        print("Invalid choice, please pick 1-6")
+        ask(user_input)
