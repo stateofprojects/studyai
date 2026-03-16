@@ -8,11 +8,15 @@ An AI-powered study assistant that helps you learn any topic through quizzes, su
 - 💡 Explain mode — get a beginner-friendly explanation of any concept
 - 📂 PDF mode — upload any PDF and ask questions about it (RAG pipeline)
 - 🧠 Conversation memory — follows up on previous answers within a session
+- 💾 Save & load sessions — export study sessions to JSON and reload them later
 - 🌐 Web UI — runs locally in the browser via Streamlit
 - 💻 Local AI — runs fully offline via LM Studio, no API needed
 
 ## How PDF mode works
 Extracts text from a PDF using PyMuPDF and passes it as context to the AI model. This is a basic implementation of Retrieval Augmented Generation (RAG).
+
+## How session saving works
+Conversations are saved as timestamped JSON files locally. Load any previous session to restore full context — the AI picks up exactly where you left off.
 
 ## Setup
 1. Clone this repo
@@ -38,5 +42,3 @@ GEMINI_API_KEY=your-key-here
 - Streamlit
 - python-dotenv
 - OpenAI SDK
-
-
